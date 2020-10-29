@@ -1,0 +1,6 @@
+    - for ships must be confined within the grid (all possible starting points for i and j
+    - winning configuration - count number of hits instead of sinking ship for game over
+    - interesting if change aim of encoding given configuration what are the ways that the ships could be placed? 
+    (model corresponding to a ship placement pattern of opponent given the hit pattern seen already)
+    - make sure we have good diagnostic output of what’s going on - print out battleship board to show what the 
+    SAT model is telling us and what it looks like (ie. need visual representation) 
