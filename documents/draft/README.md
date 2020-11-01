@@ -11,5 +11,9 @@ November 2nd, 2020
 ## Expected Items
 
 * *this repository*: We will download the most recent version of your project (including this folder) on the due date.
-* `proofs.jp`: Jape file containing sequents that you intend to use (must not be final, complete, or proven).
+
+* `proofs.jp`: The sequents listed that we intend to use describe the ship's location on the board. We want to be able to show that for each ship the corresponding locations are true. For example, if s1 refers to a carrier ship that has size of 5 spaces, we want to check that the locations of the s1 are all true (where p1-p5 are an (x,y) coordinate of each space). 
+
 * `modelling_report.docx` or `modelling_report.pptx` or (`report.txt` and `report.pdf`): Include either the Word/PowerPoint document for your documentation draft, or a link to the OverLeaf project inside of `report.txt` if that is what you chose to use for (D5). If you are using OverLeaf, include a compiled version here as `report.pdf`.
+
+* `feedback`: The areas that we would like feedback on in particular are:
