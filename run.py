@@ -4,34 +4,51 @@ from lib204 import Encoding
 import random
 
 
+# Ship objects where properties inside are propositions
 class Ship(object):
 
     # Names and sizes of ships for referencing: Carrier = 5, Battleship = 4, Cruiser = 3, Submarine = 3, Destroyer = 2
-    def __init__(self, ship_id, size):
-        # Ship id 1 - 5 in order of largest ship to smallest
-        # Cruiser ship before Submarine if matters
-        self.ship_id = ship_id
-        # Size of ship; smallest: 2, largest: 5
-        self.size = size
-        # Position of most top left piece of ship; tuple for (x, y) coordinates
-        # Lowest index 1
-        self.position = (random.randint(1, 10), random.randint(1, 10))
-        # true = horizontal; false = vertical
-        self.orientation = bool(random.getrandbits(1))
+    # As the properties can just be booleans, I'm not sure how to implement position or size
+    def __init__(self):
+        # Sizes of ship (only one would be true obviously)
+        self.size2 = Var("size2")  # Destroyer
+        self.size3 = Var("size3")  # Cruiser or Submarine
+        self.size4 = Var("size4")  # Battleship
+        self.size5 = Var("size5")  # Carrier
 
-    # Setter methods to set positions and orientations after initialization
-    # if necessary.
+        # Issue with this method is that the Var position couldn't be a coordinate; must be a boolean instead
+        # Position of ship (currently the position is the most top-left coordinate).
+        self.position = Var("position")
+        # true = horizontal; false = vertical (maybe I should change the variable name to horizontal?)
+        self.orientation = Var("orientation")
+
+        # Currently unsure how position and orientation should be done
+        # One alternative was to make a grid of Vars like in Board where the squares that the ship resides on would be true
+        # This alternative would render the ship_board variables in Board as well as the orientation variable here redundant
+        """
+        for i in range(size):
+            for j in range(size):
+                # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
+                self.position[(i + 1, j + 1)] = Var("(%d,%d)" % (i + 1, j + 1))
+        """
+
+    # Setter methods to set positions and orientations after initialization if necessary.
+    # Note: The position and orientation parameters should be Var objects
     def set_pos(self, position):
         self.position = position
 
     def set_or(self, orientation):
         self.orientation = orientation
 
-    # I think im hashing it correctly; I'm not too sure -Edward
+    # Not too sure if object has to be hashable anymore
+    """
+    # I think im hashing it correctly; I'm not following the convention in the example in library tutorial 
     def __hash__(self):
         return hash((self.ship_id, self.size, self.position, self.orientation))
+    """
 
 
+# Board object to contain the two boards and their propositions
 class Board(object):
 
     def __init__(self, size):
@@ -51,8 +68,11 @@ class Board(object):
                 # var for coordinate is true if the (x, y) position is hit
                 self.hit_board[(i + 1, j + 1)] = Var("(%d,%d)" % (i + 1, j + 1))
 
+    """
     def __hash__(self):
         return hash((self.ship_board, self.hit_board))
+    """
+
 
 """
 # Call your variables whatever you want
@@ -64,19 +84,22 @@ y = Var('y')
 z = Var('z')
 """
 
+# Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(10)
 
 # Variables for ship (position and orientation set randomly without considerations of constraints)
-s1 = Ship("1", 5)  # Carrier ship
-s2 = Ship("2", 4)  # Battleship
-s3 = Ship("3", 3)  # Cruiser ship
-s4 = Ship("4", 3)  # Submarine
-s5 = Ship("5", 2)  # Destroyer Ship
+s1 = Ship()  # Carrier ship: Size 5
+s2 = Ship()  # Battleship: Size 4
+s3 = Ship()  # Cruiser ship: Size 3
+s4 = Ship()  # Submarine: Size 3
+s5 = Ship()  # Destroyer Ship: Size 2
 
 # Array if need (e.g. using for loops for a property of the ships)
 fleet = [s1, s2, s3, s4, s5]
 
-# Alternative example of method of declaring propositions without objects
+# Alternative example of initializing propositions without self-made objects (may be to troublesome for board grid variables) .
+# I don't know if I should keep the proposition variables as is (in objects Board and Ship) or just leave it out of the objects.
+# If your group has tried either method, any feedback is appreciated.
 """
 s1 = Var('s1')  # Size of Carrier ship (5 space)
 s2 = Var('s2')  # Size of Battleship (4 space)
@@ -89,6 +112,8 @@ p2 = Var('s2')  # placement of most top left part of Battleship (5 space)
 p3 = Var('s3')  # placement of most top left part of Cruiser ship (5 space)
 p4 = Var('s4')  # placement of most top left part of Submarine (5 space)
 p5 = Var('s5')  # placement of most top left part of Destroyer ship (5 space)
+
+etc.
 """
 
 #
