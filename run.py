@@ -97,6 +97,7 @@ z = Var('z')
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(10)
 
+
 # Variables for ship (position and orientation set randomly without considerations of constraints)
 s1 = Ship()  # Carrier ship: Size 5
 s2 = Ship()  # Battleship: Size 4
@@ -145,6 +146,41 @@ def example_theory():
     """
 
     return e
+
+def maxBasedOnShipPlacement():
+
+    e = Encoding()
+    #based on ships placement, what is the max available hits a player can make
+    #i.e. all water area
+    #i.e. all ships area
+    #i.e. 
+    E.add_constraint()
+    E.add_constraint(~a | ~x)
+    E.add_constraint(c | y | z)
+    
+
+    return e    
+
+def areAllShipsOnBoard():
+
+    e = Encoding()
+    #making sure all ships are true
+    E.add_constraint(s1 & s2 & s3 & s4 & s5)
+
+    #s1=s1.callPostion
+    #s1area=
+
+    #[x11,x21
+    #x11,x22]
+    #=
+    #[1,0
+    #1,0]
+    
+    #need to double check that same locations are true on board 
+    #s1 & x11 & x12
+    E.add_constraint( player_board.ship_board[(1,1)] & s1 )
+
+    return e    
 
 
 if __name__ == "__main__":
