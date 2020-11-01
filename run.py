@@ -40,6 +40,16 @@ class Ship(object):
     def set_or(self, orientation):
         self.orientation = orientation
 
+    def set_ship(self):
+        # Maximum position ship can be placed on grid
+        max_pos = 10 - (self.size - 1)
+        # true = horizontal;
+        if self.orientation:
+            self.position = (random.randint(1, max_pos), random.randint(1, 10))
+        #false = vertical
+        else:
+            self.position = (random.randint(1, 10), random.randint(1, max_pos))
+
     # Not too sure if object has to be hashable anymore
     """
     # I think im hashing it correctly; I'm not following the convention in the example in library tutorial 
