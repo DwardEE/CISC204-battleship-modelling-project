@@ -83,7 +83,13 @@ class Board(object):
         return hash((self.ship_board, self.hit_board))
     """
 
-
+def check_ship_spacing(ship1, ship2) :
+        #Full function should return false if ship1 is touching or on top of ship2
+        #Unsure on how to check for or compare positions with location and orientation being boolean values
+        #Initial thought is to check to see if each ship is true in the same spaces on the board
+        #Any feedback on how to implement this would be greatly appreciated!
+        return True
+        
 """
 # Call your variables whatever you want
 a = Var('a')
