@@ -177,6 +177,7 @@ def areAllShipsWithinBoard():
     return e 
 
 #constraint to check if each ship is correctly placed
+#function could be repeated for each ship (s1-s5)
 #an example is located in D5 (documentation ppt - slide 5), we are 
 #having issues dealing with position and orientation variables as Var
 #would appreciate feedback
