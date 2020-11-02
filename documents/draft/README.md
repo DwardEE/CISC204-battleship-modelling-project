@@ -17,3 +17,6 @@ November 2nd, 2020
 * `modelling_report.docx` or `modelling_report.pptx` or (`report.txt` and `report.pdf`): Include either the Word/PowerPoint document for your documentation draft, or a link to the OverLeaf project inside of `report.txt` if that is what you chose to use for (D5). If you are using OverLeaf, include a compiled version here as `report.pdf`.
 
 * `feedback`: The areas that we would like feedback on in particular are:
+- what is your opinion on Var usage for propositions, given the commented and uncommented drafts
+- thoughts on constraints and complexity – possible to loop through constraints?
+- in terms of quantifiers, is the extensions clear?
