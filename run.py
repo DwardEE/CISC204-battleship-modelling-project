@@ -167,6 +167,31 @@ def maxBasedOnShipPlacement():
 
     return e    
 
+#constraints to ensure all ships are located within the board
+def areAllShipsWithinBoard():
+
+    e = Encoding()
+    #based on ships placements, are all ship pieces within board
+    E.add_constraint(s1 & s2 & s3 & s4 & s5)
+    
+    return e 
+
+#constraint to check if each ship is correctly placed
+#an example is located in D5 (documentation ppt - slide 5), we are 
+#having issues dealing with position and orientation variables as Var
+#would appreciate feedback
+def isS1WithinBoard():
+    
+    e = Encoding()
+    #based on ships placement, what is the max available hits a player can make
+    #i.e. all water area
+    #i.e. all ships area
+    #i.e. 
+    E.add_constraint()
+    
+    return e 
+
+
 def areAllShipsOnBoard():
 
     e = Encoding()
