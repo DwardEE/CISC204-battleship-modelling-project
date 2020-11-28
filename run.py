@@ -7,18 +7,18 @@ import random
 class Ship(object):
 
     # Names and sizes of ships for referencing: Carrier = 5, Battleship = 4, Cruiser = 3, Submarine = 3, Destroyer = 2
-    # As the properties can just be booleans, I'm not sure how to implement position or size
-    def __init__(self,size):
+    # size param. = size of board
+    def __init__(self,size,id):
         self.position = {}
         # Sizes of ship (only one can be true per ship object)
-        self.size2 = Var("size2")  # Destroyer
-        self.size3 = Var("size3")  # Cruiser or Submarine
-        self.size4 = Var("size4")  # Battleship
-        self.size5 = Var("size5")  # Carrier
+        self.size2 = Var("%d%s" % (id, "size2"))  # Destroyer
+        self.size3 = Var("%d%s" % (id, "size3"))  # Cruiser or Submarine
+        self.size4 = Var("%d%s" % (id, "size4"))  # Battleship
+        self.size5 = Var("%d%s" % (id, "size5"))  # Carrier
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
-                self.position[(i + 1,j + 1)] = Var("(%d,%d)" % (i + 1,j + 1))
+                self.position[(i + 1,j + 1)] = Var("%d(%d,%d)" % (id, i + 1, j + 1))
 
 
 # Board object to contain the two boards and their propositions
@@ -69,11 +69,11 @@ size = 10
 player_board = Board(size)
 
 # Variables for ship
-s1 = Ship(size)  # Carrier ship: Size 5
-s2 = Ship(size)  # Battleship: Size 4
-s3 = Ship(size)  # Cruiser ship: Size 3
-s4 = Ship(size)  # Submarine: Size 3
-s5 = Ship(size)  # Destroyer Ship: Size 2
+s1 = Ship(size,1)
+s2 = Ship(size,2)
+s3 = Ship(size,3)
+s4 = Ship(size,4)
+s5 = Ship(size,5)
 
 # Array if need (e.g. using for loops for a property of the ships)
 fleet = [s1,s2,s3,s4,s5]
@@ -85,6 +85,29 @@ fleet = [s1,s2,s3,s4,s5]
 # There should be at least 10 variables, and a sufficiently large formula to describe it (>50 operators).
 # This restriction is fairly minimal, and if there is any concern, reach out to the teaching staff to clarify
 #  what the expectations are.
+
+# See if all ship coordinates are hit
+def winCondition():
+    e = Encoding()
+
+    for ship in fleet:
+        for i in range(1,size + 1):
+            for j in range(1,size + 1):
+                e.add_constraint(player_board.hit_board[(i,j)] & ship.position[(i,j)] | ~player_board.hit_board[(i,j)] & ~ship.position[(i,j)])
+    return e
+
+#  function is trying to find the first square of the ship, however, it is too tedious to implement as of this moment
+def startingSquare():
+    e = Encoding()
+
+    for ship in fleet:
+        for i in range(1,size + 1):
+            for j in range(1,size + 1):
+                e.add_constraint(ship.position[i,j])
+                for k in range(1,size + 1):
+                    for l in range(1,size + 1):
+                        e.add_constraint(~ship.position[i,j])
+
 
 # Checks to make sure that there are no overlap in position between the ships
 def noOverlap():
@@ -101,15 +124,29 @@ def noOverlap():
 
     return e
 
-# Check to make sure that a ship can only have one size
+# Makes sure that a ship can only have one size and that there are 1 ship for size 2, 4, 5 and 2 size 3 ships
 def oneSizePerShip():
     e = Encoding()
-
-    for i in range(len(fleet)):
-        e.add_constraint((fleet[i].size2 & ~fleet[i].size3 & ~fleet[i].size4 & ~fleet[i].size5)
-                         | (~fleet[i].size2 & fleet[i].size3 & ~fleet[i].size4 & ~fleet[i].size5)
-                         | (~fleet[i].size2 & ~fleet[i].size3 & fleet[i].size4 & ~fleet[i].size5)
-                         | (~fleet[i].size2 & ~fleet[i].size3 & ~fleet[i].size4 & fleet[i].size5))
+    for ship in fleet:
+        e.add_constraint((ship.size2 & ~ship.size3 & ~ship.size4 & ~ship.size5)
+                         | (~ship.size2 & ship.size3 & ~ship.size4 & ~ship.size5)
+                         | (~ship.size2 & ~ship.size3 & ship.size4 & ~ship.size5)
+                         | (~ship.size2 & ~ship.size3 & ~ship.size4 & ship.size5))
+    e.add_constraint(((s1.size2 & ~s2.size2 & ~s3.size2 & ~s4.size2 & ~s5.size2)
+                     | (~s1.size2 & s2.size2 & ~s3.size2 & ~s4.size2 & ~s5.size2)
+                     | (~s1.size2 & ~s2.size2 & s3.size2 & ~s4.size2 & ~s5.size2)
+                     | (~s1.size2 & ~s2.size2 & ~s3.size2 & s4.size2 & ~s5.size2)
+                     | (~s1.size2 & ~s2.size2 & ~s3.size2 & ~s4.size2 & s5.size2))
+                     & ((s1.size4 & ~s2.size4 & ~s3.size4 & ~s4.size4 & ~s5.size4)
+                     | (~s1.size4 & s2.size4 & ~s3.size4 & ~s4.size4 & ~s5.size4)
+                     | (~s1.size4 & ~s2.size4 & s3.size4 & ~s4.size4 & ~s5.size4)
+                     | (~s1.size4 & ~s2.size4 & ~s3.size4 & s4.size4 & ~s5.size4)
+                     | (~s1.size4 & ~s2.size4 & ~s3.size4 & ~s4.size4 & s5.size4))
+                     & ((s1.size5 & ~s2.size5 & ~s3.size5 & ~s4.size5 & ~s5.size5)
+                     | (~s1.size5 & s2.size5 & ~s3.size5 & ~s4.size5 & ~s5.size5)
+                     | (~s1.size5 & ~s2.size5 & s3.size5 & ~s4.size5 & ~s5.size5)
+                     | (~s1.size5 & ~s2.size5 & ~s3.size5 & s4.size5 & ~s5.size5)
+                     | (~s1.size5 & ~s2.size5 & ~s3.size5 & ~s4.size5 & s5.size5)))
 
     return e
 
