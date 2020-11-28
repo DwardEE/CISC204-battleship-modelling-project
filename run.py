@@ -101,7 +101,7 @@ def noOverlap():
 
     return e
 
-
+# Check to make sure that a ship can only have one size
 def oneSizePerShip():
     e = Encoding()
 
