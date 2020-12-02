@@ -88,6 +88,8 @@ fleet = [s1,s2,s3,s4,s5]
 # This restriction is fairly minimal, and if there is any concern, reach out to the teaching staff to clarify
 #  what the expectations are.
 
+# The constraints are separated for easier debugging
+
 # See if all ship coordinates are hit
 def winCondition():
     e = Encoding()
@@ -99,7 +101,11 @@ def winCondition():
     return e
 
 
-#  function is trying to find the first square of the ship, however, it is too tedious to implement as of this moment
+#  Function tries to make sure that there is only one location per ship. The constraint similar to how sizes are determined. There can only be
+#  one location per ship and this "starting square" determines where the top-left most position will be. Orientation of ship and remaining occupied
+#  spaces are determined afterwards. However, instead of 5 sizes to consider it tries to consider all possible grid squares which supposidly would be 100
+#  (10x10) but is now limited to (5x5) and 2 ships as my computer was dying trying to compute it. I feel like the method below is the only way to do it
+#  but at the same time, it seems very unoptimized.
 def startingSquare():
     e = Encoding()
     prev_cons = false
@@ -127,6 +133,7 @@ def startingSquare():
             prev_cons = prev_cons | conjunct
             conjunct = true
     e.add_constraint(prev_cons)
+    # Testing the addition of no overlap constraint
     for i in range(1,size + 1):
         for j in range(1,size + 1):
             e.add_constraint((s1.position[(i,j)] & ~s2.position[(i,j)]) | (~s1.position[(i,j)] & s2.position[(i,j)]) | (~s1.position[(i,j)] & ~s2.position[(i,j)]))
