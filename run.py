@@ -1,4 +1,6 @@
 from nnf import Var
+from nnf import false
+from nnf import true
 from lib204 import Encoding
 import random
 
@@ -64,7 +66,7 @@ x = Var('x')
 y = Var('y')
 z = Var('z')
 """
-size = 10
+size = 5
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(size)
 
@@ -96,17 +98,39 @@ def winCondition():
                 e.add_constraint(player_board.hit_board[(i,j)] & ship.position[(i,j)] | ~player_board.hit_board[(i,j)] & ~ship.position[(i,j)])
     return e
 
+
 #  function is trying to find the first square of the ship, however, it is too tedious to implement as of this moment
 def startingSquare():
     e = Encoding()
-
-    for ship in fleet:
-        for i in range(1,size + 1):
-            for j in range(1,size + 1):
-                e.add_constraint(ship.position[i,j])
-                for k in range(1,size + 1):
-                    for l in range(1,size + 1):
-                        e.add_constraint(~ship.position[i,j])
+    prev_cons = false
+    conjunct = true
+    for i in range(1, size + 1):
+        for j in range(1, size + 1):
+            for k in range(1, size + 1):
+                for l in range(1, size + 1):
+                    if k == i and l == j:
+                        conjunct = conjunct & s1.position[k,l]
+                    else:
+                        conjunct = conjunct & ~s1.position[k,l]
+            prev_cons = prev_cons | conjunct
+            conjunct = true
+    e.add_constraint(prev_cons)
+    prev_cons = false
+    for i in range(1, size + 1):
+        for j in range(1, size + 1):
+            for k in range(1, size + 1):
+                for l in range(1, size + 1):
+                    if k == i and l == j:
+                        conjunct = conjunct & s2.position[k,l]
+                    else:
+                        conjunct = conjunct & ~s2.position[k,l]
+            prev_cons = prev_cons | conjunct
+            conjunct = true
+    e.add_constraint(prev_cons)
+    for i in range(1,size + 1):
+        for j in range(1,size + 1):
+            e.add_constraint((s1.position[(i,j)] & ~s2.position[(i,j)]) | (~s1.position[(i,j)] & s2.position[(i,j)]) | (~s1.position[(i,j)] & ~s2.position[(i,j)]))
+    return e
 
 
 # Checks to make sure that there are no overlap in position between the ships
@@ -212,15 +236,21 @@ def areAllShipsOnBoard():
 
 if __name__ == "__main__":
     N = noOverlap()
-    S = oneSizePerShip()
+    O = oneSizePerShip()
+    S = startingSquare()
 
     print("\nSatisfiable: %s" % N.is_satisfiable())
     print("# Solutions: %d" % N.count_solutions())
     print("   Solution: %s" % N.solve())
 
+    print("\nSatisfiable: %s" % O.is_satisfiable())
+    print("# Solutions: %d" % O.count_solutions())
+    print("   Solution: %s" % O.solve())
+
     print("\nSatisfiable: %s" % S.is_satisfiable())
     print("# Solutions: %d" % S.count_solutions())
     print("   Solution: %s" % S.solve())
+
     """
     print("\nVariable likelihoods:")
     for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
