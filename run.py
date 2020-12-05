@@ -272,11 +272,6 @@ def areAllShipsOnBoard():
     e = Encoding()
     # making sure all ships are true
 
-    # Unknown purpose of constraint
-    """
-    e.add_constraint(s1 & s2 & s3 & s4 & s5)
-    """
-
     #C1 if all ships are present--> true
     #and if all board squares contain ship/ are filled--> true
     #then it is concluded that all the ships are on the board
