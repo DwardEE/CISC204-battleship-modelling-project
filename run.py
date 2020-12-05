@@ -242,7 +242,7 @@ def maxBasedOnShipPlacement():
     #saves the 5 ship locations for that configuration. Then, the ship location frequencies are used to calculate the squares' hit frequencies all in one go.
     #If any ship's location can be deduced, it gets removed from process
 
-    e.add_constraint()
+    #e.add_constraint()
     return e
 
 
@@ -274,7 +274,7 @@ def isShipWithinBoard():
 def areAllShipsOnBoard():
     e = Encoding()
     # making sure all ships are true
-    e.add_constraint(s1 & s2 & s3 & s4 & s5)
+    #e.add_constraint(s1 & s2 & s3 & s4 & s5)
 
     #C1 if all ships are present--> true
     #and if all board squares contain ship/ are filled--> true
@@ -297,22 +297,6 @@ def areAllShipsOnBoard():
     e.add_constraint(C1 & C2)
     return e
 
-
-
-    # s1=s1.callPostion
-    # s1area=
-
-    # [x11,x21
-    # x11,x22]
-    # =
-    # [1,0
-    # 1,0]
-
-    # need to double check that same locations are true on board
-    # s1 & x11 & x12
-    e.add_constraint(player_board.ship_board[(1,1)] & s1)
-
-    return e
 
 
 if __name__ == "__main__":
