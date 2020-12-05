@@ -218,19 +218,33 @@ def orientation():
 
     return e
 
-"""
 def maxBasedOnShipPlacement():
     e = Encoding()
-    # based on ships placement, what is the max available hits a player can make
-    # i.e. all water area
-    # i.e. all ships area
-    # i.e.
+    # based on ships placement,The goal is to sink the ship (which has already been hit once) with a minimal number of misses.
+    # ship S is given and can only be translated in grid then know, the coordinates of one grid cell of the ship.
+    #in decision tree,  the set of possible positions at the root is P = S and P gets smaller at each new shot until
+    #it is reduced to a singleton at the leaves of the tree.
+    # If x is a hit, then the set of possible positions for the child becomes P ← P ∩ (S − x).
+    #If x is a miss, then the set of possible positions for the child becomes P ← P \ (S − x).
+
+
+    #Here are some examples of ways possible ship locations can be eliminated:
+    #A 'miss' square disqualifies a bunch of intersecting locations.
+    #A square where a ship has been marked 'sunk' disqualifies any other ships from crossing that square.
+    #A ship that's been sunk has to cross the square where it was sunk.
+    #Sunk ships cannot cross any square that is not a 'hit'.
+    #Ships that are not sunk can't be located entirely on 'hit' squares.
+    #If a certain spot on the board could only hold one certain ship, no other ships can cross any of those squares.
+    #If a 'hit' square is surrounded by misses in 3 directions, there must be a ship pointing in the fourth direction.
+
+    #optimized:
+    #A list of 'hit' squares is used to check the configurations against, rather than going through all 100 squares each time.
+    #saves the 5 ship locations for that configuration. Then, the ship location frequencies are used to calculate the squares' hit frequencies all in one go.
+    #If any ship's location can be deduced, it gets removed from process
+
     e.add_constraint()
-    e.add_constraint(~a | ~x)
-    e.add_constraint(c | y | z)
-    
     return e
-"""
+
 
 # constraints to ensure all ships are located within the board
 def areAllShipsWithinBoard():
@@ -261,6 +275,29 @@ def areAllShipsOnBoard():
     e = Encoding()
     # making sure all ships are true
     e.add_constraint(s1 & s2 & s3 & s4 & s5)
+
+    #C1 if all ships are present--> true
+    #and if all board squares contain ship/ are filled--> true
+    #then it is concluded that all the ships are on the board
+    for ship in fleet:
+        for i in range(1,(size + 1)):
+            for j in range(1,(size + 1)):
+                C1=(player_board.hit_board[(i,j)] & ship.position[(i,j)])
+
+    #C2 inverse confirmed as well
+    # if all ships are NOT present--> true
+    #and if all board squares the DO NOT contain ship/ are empty--> true
+    #then it is concluded that there are NO ships where the board should be empty
+
+    for ship in fleet:
+        for i in range(1,(size + 1)):
+            for j in range(1,(size + 1)):
+                C2=(~player_board.hit_board[(i,j)] & ~ship.position[(i,j)])
+
+    e.add_constraint(C1 & C2)
+    return e
+
+
 
     # s1=s1.callPostion
     # s1area=
