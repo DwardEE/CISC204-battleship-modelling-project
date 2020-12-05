@@ -1,8 +1,6 @@
 from nnf import Var
-from nnf import false
-from nnf import true
 from lib204 import Encoding
-import random
+import nnf
 
 
 # Ship objects where properties inside are propositions
@@ -17,6 +15,7 @@ class Ship(object):
         self.size3 = Var("%d%s" % (id, "size3"))  # Cruiser or Submarine
         self.size4 = Var("%d%s" % (id, "size4"))  # Battleship
         self.size5 = Var("%d%s" % (id, "size5"))  # Carrier
+        self.horizontal = Var("%d%s" % (id, "horizontal"))  # Horizontal if true, vertical if false
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
@@ -25,8 +24,8 @@ class Ship(object):
 
 # Board object to contain the two boards and their propositions
 class Board(object):
-
-    def __init__(self,size):
+    def __init__(self, size):
+        """
         # Board for ship placement with the individual squares as variables
         self.ship_board = {}
         # Standardized to 10x10 for now
@@ -34,6 +33,7 @@ class Board(object):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
                 self.ship_board[(i + 1,j + 1)] = Var("(%d,%d)" % (i + 1,j + 1))
+        """
 
         # Board for hit marking with the individual squares as variables
         self.hit_board = {}
@@ -42,11 +42,6 @@ class Board(object):
             for j in range(size):
                 # var for coordinate is true if the (x, y) position is hit
                 self.hit_board[(i + 1,j + 1)] = Var("(%d,%d)" % (i + 1,j + 1))
-
-    """
-    def __hash__(self):
-        return hash((self.ship_board, self.hit_board))
-    """
 
 
 def check_ship_spacing(ship1,ship2):
@@ -66,7 +61,8 @@ x = Var('x')
 y = Var('y')
 z = Var('z')
 """
-size = 5
+# size of board (size x size); scalable for debugging and expansion/extension
+size = 10
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(size)
 
@@ -101,42 +97,42 @@ def winCondition():
     return e
 
 
-#  Function tries to make sure that there is only one location per ship. The constraint similar to how sizes are determined. There can only be
-#  one location per ship and this "starting square" determines where the top-left most position will be. Orientation of ship and remaining occupied
-#  spaces are determined afterwards. However, instead of 5 sizes to consider it tries to consider all possible grid squares which supposidly would be 100
-#  (10x10) but is now limited to (5x5) and 2 ships as my computer was dying trying to compute it. I feel like the method below is the only way to do it
-#  but at the same time, it seems very unoptimized.
-def startingSquare():
-    e = Encoding()
-    prev_cons = false
-    conjunct = true
-    for i in range(1, size + 1):
-        for j in range(1, size + 1):
-            for k in range(1, size + 1):
-                for l in range(1, size + 1):
-                    if k == i and l == j:
-                        conjunct = conjunct & s1.position[k,l]
-                    else:
-                        conjunct = conjunct & ~s1.position[k,l]
-            prev_cons = prev_cons | conjunct
-            conjunct = true
-    e.add_constraint(prev_cons)
-    prev_cons = false
-    for i in range(1, size + 1):
-        for j in range(1, size + 1):
-            for k in range(1, size + 1):
-                for l in range(1, size + 1):
-                    if k == i and l == j:
-                        conjunct = conjunct & s2.position[k,l]
-                    else:
-                        conjunct = conjunct & ~s2.position[k,l]
-            prev_cons = prev_cons | conjunct
-            conjunct = true
-    e.add_constraint(prev_cons)
-    # Testing the addition of no overlap constraint
+#  Helper function that makes sure that the specified ship may only exist on one square. Returns a list of constraints
+#  specific for each ship which will be added as a constraint of disjunctions in the main starting square function.
+def startingSquareHelper(ship):
+    # empty list to be populated to become list of a list of conjuncts
+    conjunct_list = []
+    # the returned list of list of conjuncts
+    constraint_list = []
     for i in range(1,size + 1):
         for j in range(1,size + 1):
-            e.add_constraint((s1.position[(i,j)] & ~s2.position[(i,j)]) | (~s1.position[(i,j)] & s2.position[(i,j)]) | (~s1.position[(i,j)] & ~s2.position[(i,j)]))
+            # For each square, creates conjunction between the square and the ~squares of the rest of the grid to make
+            # sure that there exists a square that the ship may reside on, and it may only reside on that one square
+            for k in range(1,size + 1):
+                for l in range(1,size + 1):
+                    if k == i and l == j:
+                        conjunct_list.append(ship.position[k,l])
+                    else:
+                        conjunct_list.append(~ship.position[k,l])
+            constraint_list.append(nnf.And(conjunct_list))
+            conjunct_list = []
+    return constraint_list
+
+
+#  Function to determine the starting square of each ship
+def startingSquarePlacement():
+    e = Encoding()
+    # Each function determines the potential starting square of the given ship.
+    e.add_constraint(nnf.Or(startingSquareHelper(s1)))
+    e.add_constraint(nnf.Or(startingSquareHelper(s2)))
+    e.add_constraint(nnf.Or(startingSquareHelper(s3)))
+    e.add_constraint(nnf.Or(startingSquareHelper(s4)))
+    e.add_constraint(nnf.Or(startingSquareHelper(s5)))
+
+    """
+    at_least_one = nnf.Or([s1.position[i,j] for i in range(1,size + 1) for j in range(1,size + 1)])
+    e.add_constraint(at_least_one)
+    """
     return e
 
 
@@ -156,13 +152,16 @@ def noOverlap():
     return e
 
 # Makes sure that a ship can only have one size and that there are 1 ship for size 2, 4, 5 and 2 size 3 ships
-def oneSizePerShip():
+def sizesAndOrientation():
     e = Encoding()
+    length_constraint = []
     for ship in fleet:
+        # Makes sure that there is on 1 size for each ship
         e.add_constraint((ship.size2 & ~ship.size3 & ~ship.size4 & ~ship.size5)
                          | (~ship.size2 & ship.size3 & ~ship.size4 & ~ship.size5)
                          | (~ship.size2 & ~ship.size3 & ship.size4 & ~ship.size5)
                          | (~ship.size2 & ~ship.size3 & ~ship.size4 & ship.size5))
+    # Makes sure that each size can have only their limited amount of ships (1 2space, 2 3space, 1 4 space, 1 5 space)
     e.add_constraint(((s1.size2 & ~s2.size2 & ~s3.size2 & ~s4.size2 & ~s5.size2)
                      | (~s1.size2 & s2.size2 & ~s3.size2 & ~s4.size2 & ~s5.size2)
                      | (~s1.size2 & ~s2.size2 & s3.size2 & ~s4.size2 & ~s5.size2)
@@ -178,10 +177,48 @@ def oneSizePerShip():
                      | (~s1.size5 & ~s2.size5 & s3.size5 & ~s4.size5 & ~s5.size5)
                      | (~s1.size5 & ~s2.size5 & ~s3.size5 & s4.size5 & ~s5.size5)
                      | (~s1.size5 & ~s2.size5 & ~s3.size5 & ~s4.size5 & s5.size5)))
+    # hoping code would be able to determine orientation and length based on the orientation Var and the supposed starting point Var using implication. Currently computer is unable to compute; code
+    # may be too inefficient.
+    """
+    for ship in fleet:
+        for i in range(1,size):
+            for j in range(1,size + 1):
+                length_constraint.append(((ship.horizontal & ship.size2 & ship.position[(i, j)]).negate() | ship.position[(i+1, j)]))
+        for i in range(1,size + 1):
+            for j in range(1,size):
+                length_constraint.append(((~ship.horizontal & ship.size2 & ship.position[(i, j)]).negate() | ship.position[(i, j+1)]))
+        for i in range(1,size - 1):
+            for j in range(1,size + 1):
+                length_constraint.append(((ship.horizontal & ship.size3 & ship.position[(i, j)]).negate() | (ship.position[(i+1, j)] & ship.position[(i+2, j)])))
+        for i in range(1,size + 1):
+            for j in range(1,size - 1):
+                length_constraint.append(((~ship.horizontal & ship.size3 & ship.position[(i, j)]).negate() | (ship.position[(i, j+1)] & ship.position[(i, j+2)])))
+        for i in range(1,size - 2):
+            for j in range(1,size + 1):
+                length_constraint.append(((ship.horizontal & ship.size4 & ship.position[(i, j)]).negate() | (ship.position[(i+1, j)] & ship.position[(i+2, j)] & ship.position[(i+3, j)])))
+        for i in range(1,size + 1):
+            for j in range(1,size - 2):
+                length_constraint.append(((~ship.horizontal & ship.size4 & ship.position[(i, j)]).negate() | (ship.position[(i, j+1)] & ship.position[(i, j+2)] & ship.position[(i, j+3)])))
+        for i in range(1,size - 3):
+            for j in range(1,size + 1):
+                length_constraint.append(((ship.horizontal & ship.size5 & ship.position[(i, j)]).negate() | (ship.position[(i + 1, j)] & ship.position[(i + 2, j)] & ship.position[(i + 3, j)] & ship.position[(
+                    i+4, j)])))
+        for i in range(1,size + 1):
+            for j in range(1,size - 3):
+                length_constraint.append(((~ship.horizontal & ship.size5 & ship.position[(i, j)]).negate() | (ship.position[(i, j + 1)] & ship.position[(i, j + 2)] & ship.position[(i, j + 3)] & ship.position[(i,
+                                                                                                                                                                                                j + 4)])))
+        e.add_constraint(nnf.And(length_constraint))
+        """
+    return e
+
+# Determines orientation of ship
+def orientation():
+    e = Encoding()
+
 
     return e
 
-
+"""
 def maxBasedOnShipPlacement():
     e = Encoding()
     # based on ships placement, what is the max available hits a player can make
@@ -191,9 +228,9 @@ def maxBasedOnShipPlacement():
     e.add_constraint()
     e.add_constraint(~a | ~x)
     e.add_constraint(c | y | z)
-
+    
     return e
-
+"""
 
 # constraints to ensure all ships are located within the board
 def areAllShipsWithinBoard():
@@ -243,8 +280,8 @@ def areAllShipsOnBoard():
 
 if __name__ == "__main__":
     N = noOverlap()
-    O = oneSizePerShip()
-    S = startingSquare()
+    O = sizesAndOrientation()
+    S = startingSquarePlacement()
 
     print("\nSatisfiable: %s" % N.is_satisfiable())
     print("# Solutions: %d" % N.count_solutions())
