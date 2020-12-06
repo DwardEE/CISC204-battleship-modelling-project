@@ -62,11 +62,11 @@ y = Var('y')
 z = Var('z')
 """
 # size of board (size x size); scalable for debugging and expansion/extension
-size = 10
+size = 3
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(size)
 
-# Variables for ship
+# Variables for ship (size of ship, length)
 s1 = Ship(size,1)
 s2 = Ship(size,2)
 s3 = Ship(size,3)
@@ -128,6 +128,15 @@ def startingSquarePlacement():
     e.add_constraint(nnf.Or(startingSquareHelper(s3)))
     e.add_constraint(nnf.Or(startingSquareHelper(s4)))
     e.add_constraint(nnf.Or(startingSquareHelper(s5)))
+
+    for i in range(1,size + 1):
+        for j in range(1,size + 1):
+            e.add_constraint((s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)])
+                        | (~s1.position[(i,j)] & s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)])
+                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)])
+                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & s4.position[(i,j)] & ~s5.position[(i,j)])
+                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & s5.position[(i,j)])
+                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)]))
 
     """
     at_least_one = nnf.Or([s1.position[i,j] for i in range(1,size + 1) for j in range(1,size + 1)])
