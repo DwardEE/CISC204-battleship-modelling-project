@@ -264,7 +264,7 @@ if __name__ == "__main__":
     print("\n Grid size=", size)
     print("\n Ships count=", len(fleet))
     for i in range (0,len(fleet)):
-        print ("\n Ship #"+str(i)+":",fleet[i])
+        print ("\n Ship #"+str(i)+": size"+(i+2))
     
     start = time.perf_counter()
     
