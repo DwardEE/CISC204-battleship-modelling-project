@@ -260,6 +260,14 @@ def areAllShipsOnBoard():
 
 
 if __name__ == "__main__":
+    
+    print("\n Grid size=", size)
+    print("\n Ships count=", len(fleet))
+    for i in range (0,len(fleet)):
+        print ("\n Ship #"+str(i)+":",ship)
+    
+    start = time.perf_counter()
+    
     N = noOverlap()
     Si = sizes()
     F = finalEncoding()
@@ -280,15 +288,14 @@ if __name__ == "__main__":
     print("# Solutions: %d" % S.count_solutions())
     print("   Solution: %s" % S.solve())
     """
-    
-    start = time.perf_counter()
+
     
     print("\nSatisfiable: %s" % F.is_satisfiable())
     print("# Solutions: %d" % F.count_solutions())
     print("   Solution: %s" % F.solve())
     
     end = time.perf_counter()
-    print(f"\nComputed the solution in {end - start:0.4f} seconds")
+    print(f"\nComputed solution in {end - start:0.4f} seconds")
 
 
     """
