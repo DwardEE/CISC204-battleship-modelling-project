@@ -4,6 +4,9 @@ from nnf import true
 from lib204 import Encoding
 import nnf
 
+#should be built in
+import time
+
 
 # Ship objects where properties inside are propositions
 class Ship(object):
@@ -277,10 +280,15 @@ if __name__ == "__main__":
     print("# Solutions: %d" % S.count_solutions())
     print("   Solution: %s" % S.solve())
     """
-
+    
+    start = time.perf_counter()
+    
     print("\nSatisfiable: %s" % F.is_satisfiable())
     print("# Solutions: %d" % F.count_solutions())
     print("   Solution: %s" % F.solve())
+    
+    end = time.perf_counter()
+    print(f"Downloaded the tutorial in {end - start:0.4f} seconds")
 
 
     """
