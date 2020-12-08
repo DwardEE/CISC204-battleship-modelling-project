@@ -8,21 +8,27 @@ import nnf
 # Ship objects where properties inside are propositions
 class Ship(object):
 
-    # Names and sizes of ships for referencing: Carrier = 5, Battleship = 4, Cruiser = 3, Submarine = 3, Destroyer = 2
-    # size param. = size of board
+    # Names and sizes of ships for referencing: Battleship = 4, Cruiser = 3, Destroyer = 2 *Note: Names are arbitrary; they do not matter in any scenario
+    # size param. = size of board that the ship will be on, id param. = ID of instantiated Ship object
     def __init__(self,size,id):
-        self.position = {} # Position of the final ships
-        self.startPosition = {} # Used to determine the independent positions of the starting ships
+        self.position = {}  # Position of the final ships
+        self.startPosition = {}  # Used to determine the independent positions of the starting ships
+        self.intermediatePosition = {}  # Board for a ship's placed position that are not the starting position
         # Sizes of ship (only one can be true per ship object)
         self.size2 = Var("%d%s" % (id, "size2"))  # Destroyer
         self.size3 = Var("%d%s" % (id, "size3"))  # Cruiser or Submarine
         self.size4 = Var("%d%s" % (id, "size4"))  # Battleship
         # self.size5 = Var("%d%s" % (id, "size5"))
         self.horizontal = Var("%d%s" % (id, "horizontal"))  # Horizontal if true, vertical if false
+        self.vertical = Var("%d%s" % (id,"vertical"))  # Vertical if true, horizontal if false (redundant but both vars exist to help with more readable code)
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
-                self.startPosition[(i + 1,j + 1)] = Var("%d(%d,%d)" % (id, i + 1, j + 1))
+                self.startPosition[(i + 1,j + 1)] = Var("%ds(%d,%d)" % (id, i + 1, j + 1))
+        for i in range(size):
+            for j in range(size):
+                # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
+                self.intermediatePosition[(i + 1,j + 1)] = Var("%di(%d,%d)" % (id, i + 1, j + 1))
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
@@ -32,19 +38,9 @@ class Ship(object):
 # Board object to contain the two boards and their propositions
 class Board(object):
     def __init__(self, size):
-        """
-        # Board for ship placement with the individual squares as variables
-        self.ship_board = {}
-        # Standardized to 10x10 for now
-        for i in range(size):
-            for j in range(size):
-                # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
-                self.ship_board[(i + 1,j + 1)] = Var("(%d,%d)" % (i + 1,j + 1))
-        """
-
-        # Board for hit marking with the individual squares as variables
+        # Player board standardized to 6x6 for now due to computing limitations
+        # May be used for any encoding assessing hits
         self.hit_board = {}
-        # Standardized to 10x10 for now
         for i in range(size):
             for j in range(size):
                 # var for coordinate is true if the (x, y) position is hit
@@ -59,16 +55,7 @@ def check_ship_spacing(ship1,ship2):
     return True
 
 
-"""
-# Call your variables whatever you want
-a = Var('a')
-b = Var('b')
-c = Var('c')
-x = Var('x')
-y = Var('y')
-z = Var('z')
-"""
-# size of board (size x size); scalable for debugging and expansion/extension
+# size of board (size x size); scalable for debugging and expansion/extension or to avoid computation issues
 size = 6
 
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
@@ -84,16 +71,6 @@ s5 = Ship(size,5)
 # Array if need (e.g. using for loops for a property of the ships)
 fleet = [s1,s2,s3]
 
-
-#
-# Build an example full theory for your setting and return it.
-#
-# There should be at least 10 variables, and a sufficiently large formula to describe it (>50 operators).
-# This restriction is fairly minimal, and if there is any concern, reach out to the teaching staff to clarify
-#  what the expectations are.
-
-# The constraints are separated for easier debugging
-
 # See if all ship coordinates are hit
 def winCondition():
     e = Encoding()
@@ -107,7 +84,7 @@ def winCondition():
 
 #  Helper function that makes sure that the specified ship may only exist on one square. Returns a list of constraints
 #  specific for each ship which will be added as a constraint of disjunctions in the main starting square function.
-def startingSquareHorizontalHelper(ship):
+def startingSquareHelper(ship):
     # empty list to be populated to become list of a list of conjuncts
     conjunct_list = []
     # the returned list of list of conjuncts
@@ -126,35 +103,32 @@ def startingSquareHorizontalHelper(ship):
             conjunct_list = []
     return constraint_list
 
-def startingSquareVerticalHelper(ship):
-    # empty list to be populated to become list of a list of conjuncts
-    conjunct_list = []
-    # the returned list of list of conjuncts
-    constraint_list = []
+
+#  Encodes for the final actual position of the whole ship depending on the other propositions: orientation, size, starting square
+def allFinalPositions():
+    e = Encoding()
+    for i in range(1, size + 1):
+        for j in range(i, size + 1):
+            e.add_constraint(((s1.horizontal & s1.startPosition & s1.size2).negate() | s1.intermediatePosition[(i + 1, j)]) | (s1.startPosition[(i,j)]))
+
+    return e
+
+# Checks to make sure that there are no overlap in position between the ships
+def noOverlap():
+    e = Encoding()
     for i in range(1,size + 1):
         for j in range(1,size + 1):
-            # For each square, creates conjunction between the square and the ~squares of the rest of the grid to make
-            # sure that there exists a square that the ship may reside on, and it may only reside on that one square
-            for k in range(1,size + 1):
-                for l in range(1,size + 1):
-                    if k == i and l == j:
-                        conjunct_list.append(ship.startPosition[k,l])
-                    else:
-                        conjunct_list.append(~ship.startPosition[k,l])
-            constraint_list.append(nnf.And(conjunct_list))
-            conjunct_list = []
-    return constraint_list
+            e.add_constraint((s1.startPosition[(i,j)] & ~s2.startPosition[(i,j)] & ~s3.startPosition[(i,j)])
+                             | (~s1.startPosition[(i,j)] & s2.startPosition[(i,j)] & ~s3.startPosition[(i,j)])
+                             | (~s1.startPosition[(i,j)] & ~s2.startPosition[(i,j)] & s3.startPosition[(i,j)])
+                             | (~s1.startPosition[(i,j)] & ~s2.startPosition[(i,j)] & ~s3.startPosition[(i,j)]))
 
-#  Function to determine the starting square of each ship
-def startingSquarePlacement():
+    return e
+
+# Makes sure that a ship can only have one size and that there are 1 ship for size 2, 4, 5 and 2 size 3 ships
+def sizes():
     e = Encoding()
     length_constraint = []
-    initial_list = []
-    # Each function determines the potential starting square of the given ship.
-    e.add_constraint((nnf.Or(startingSquareHorizontalHelper(s1) & s1.horizontal)|(nnf.Or(startingSquareVerticalHelper(s1) & ~s1.horizontal))))
-    e.add_constraint(nnf.Or(startingSquareHelper(s2)))
-    e.add_constraint(nnf.Or(startingSquareHelper(s3)))
-
     for ship in fleet:
         # Makes sure that there is on 1 size for each ship
         e.add_constraint((ship.size2 & ~ship.size3 & ~ship.size4)
@@ -169,139 +143,37 @@ def startingSquarePlacement():
                      & ((s1.size4 & ~s2.size4 & ~s3.size4)
                         | (~s1.size4 & s2.size4 & ~s3.size4)
                         | (~s1.size4 & ~s2.size4 & s3.size4)))
-
-    """
-    for i in range(1,size):
-        for j in range(1,size + 1):
-            length_constraint.append((s1.horizontal & s1.size2 & s1.startPosition[(i, j)]).negate() | s1.position[(i+1, j)])
-    for i in range(1,size + 1):
-        for j in range(1,size):
-            length_constraint.append((~s1.horizontal & s1.size2 & s1.startPosition[(i, j)]).negate() | s1.position[(i, j+1)])
-    for i in range(1,size - 1):
-        for j in range(1,size + 1):
-            length_constraint.append(((s1.horizontal & s1.size3 & s1.startPosition[(i, j)]).negate() | (s1.position[(i+1, j)] & s1.position[(i+2, j)])))
-    for i in range(1,size + 1):
-        for j in range(1,size - 1):
-            length_constraint.append(((~s1.horizontal & s1.size3 & s1.startPosition[(i, j)]).negate() | (s1.position[(i, j+1)] & s1.position[(i, j+2)])))
-    for i in range(1,size - 2):
-        for j in range(1,size + 1):
-            length_constraint.append(((s1.horizontal & s1.size4 & s1.startPosition[(i, j)]).negate() | (s1.position[(i+1, j)] & s1.position[(i+2, j)] & s1.position[(i+3, j)])))
-    for i in range(1,size + 1):
-        for j in range(1,size - 2):
-            length_constraint.append(((~s1.horizontal & s1.size4 & s1.startPosition[(i, j)]).negate() | (s1.position[(i, j+1)] & s1.position[(i, j+2)] & s1.position[(i, j+3)])))
-    """
-
-    e.add_constraint(nnf.And(length_constraint))
-    """
-    for i in range (1, size + 1):
-        for j in range(1, size + 1):
-            initial_list.append(~s1.position[(i, j)])
-    e.add_constraint(nnf.And(initial_list))
-    """
-
-    for i in range(1,size + 1):
-        for j in range(1,size + 1):
-            e.add_constraint((s1.startPosition[(i,j)] & ~s2.startPosition[(i,j)] & ~s3.startPosition[(i,j)])
-                        | (~s1.startPosition[(i,j)] & s2.startPosition[(i,j)] & ~s3.startPosition[(i,j)])
-                        | (~s1.startPosition[(i,j)] & ~s2.startPosition[(i,j)] & s3.startPosition[(i,j)])
-                        | (~s1.startPosition[(i,j)] & ~s2.startPosition[(i,j)] & ~s3.startPosition[(i,j)]))
-
-    """
-    at_least_one = nnf.Or([s1.position[i,j] for i in range(1,size + 1) for j in range(1,size + 1)])
-    e.add_constraint(at_least_one)
-    """
-    return e
-
-def finalPositions():
-    e = Encoding()
-    initial_list = []
-    for i in range (1, size + 1):
-        for j in range(1, size + 1):
-            initial_list.append(false)
-    e.add_constraint(nnf.And(initial_list))
-
-
-    return e
-
-# Checks to make sure that there are no overlap in position between the ships
-def noOverlap():
-    e = Encoding()
-
-    for i in range(1,size + 1):
-        for j in range(1,size + 1):
-            e.add_constraint((s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)])
-                        | (~s1.position[(i,j)] & s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)])
-                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)])
-                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & s4.position[(i,j)] & ~s5.position[(i,j)])
-                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & s5.position[(i,j)])
-                        | (~s1.position[(i,j)] & ~s2.position[(i,j)] & ~s3.position[(i,j)] & ~s4.position[(i,j)] & ~s5.position[(i,j)]))
-
-    return e
-
-# Makes sure that a ship can only have one size and that there are 1 ship for size 2, 4, 5 and 2 size 3 ships
-def sizesAndOrientation():
-
-    e = Encoding()
-    length_constraint = []
-    for ship in fleet:
-        # Makes sure that there is on 1 size for each ship
-        e.add_constraint((ship.size2 & ~ship.size3 & ~ship.size4 & ~ship.size5)
-                         | (~ship.size2 & ship.size3 & ~ship.size4 & ~ship.size5)
-                         | (~ship.size2 & ~ship.size3 & ship.size4 & ~ship.size5)
-                         | (~ship.size2 & ~ship.size3 & ~ship.size4 & ship.size5))
-    # Makes sure that each size can have only their limited amount of ships (1 2space, 2 3space, 1 4 space, 1 5 space)
-    e.add_constraint(((s1.size2 & ~s2.size2 & ~s3.size2 & ~s4.size2 & ~s5.size2)
-                     | (~s1.size2 & s2.size2 & ~s3.size2 & ~s4.size2 & ~s5.size2)
-                     | (~s1.size2 & ~s2.size2 & s3.size2 & ~s4.size2 & ~s5.size2)
-                     | (~s1.size2 & ~s2.size2 & ~s3.size2 & s4.size2 & ~s5.size2)
-                     | (~s1.size2 & ~s2.size2 & ~s3.size2 & ~s4.size2 & s5.size2))
-                     & ((s1.size4 & ~s2.size4 & ~s3.size4 & ~s4.size4 & ~s5.size4)
-                     | (~s1.size4 & s2.size4 & ~s3.size4 & ~s4.size4 & ~s5.size4)
-                     | (~s1.size4 & ~s2.size4 & s3.size4 & ~s4.size4 & ~s5.size4)
-                     | (~s1.size4 & ~s2.size4 & ~s3.size4 & s4.size4 & ~s5.size4)
-                     | (~s1.size4 & ~s2.size4 & ~s3.size4 & ~s4.size4 & s5.size4))
-                     & ((s1.size5 & ~s2.size5 & ~s3.size5 & ~s4.size5 & ~s5.size5)
-                     | (~s1.size5 & s2.size5 & ~s3.size5 & ~s4.size5 & ~s5.size5)
-                     | (~s1.size5 & ~s2.size5 & s3.size5 & ~s4.size5 & ~s5.size5)
-                     | (~s1.size5 & ~s2.size5 & ~s3.size5 & s4.size5 & ~s5.size5)
-                     | (~s1.size5 & ~s2.size5 & ~s3.size5 & ~s4.size5 & s5.size5)))
-    # hoping code would be able to determine orientation and length based on the orientation Var and the supposed starting point Var using implication. Currently computer is unable to compute; code
-    # may be too inefficient. Trying to accomplish at least 1 ship. Hopefully code can be added to the starting position encoding to further model proper ship position
-    for i in range(1,size):
-        for j in range(1,size + 1):
-            length_constraint.append(((s1.horizontal & s1.size2 & s1.position[(i, j)]).negate() | ~s1.position[(i+1, j)]))
-    for i in range(1,size + 1):
-        for j in range(1,size):
-            length_constraint.append(((~s1.horizontal & s1.size2 & s1.position[(i, j)]).negate() | ~s1.position[(i, j+1)]))
-    for i in range(1,size - 1):
-        for j in range(1,size + 1):
-            length_constraint.append(((s1.horizontal & s1.size3 & s1.position[(i, j)]).negate() | (~s1.position[(i+1, j)] & ~s1.position[(i+2, j)])))
-    for i in range(1,size + 1):
-        for j in range(1,size - 1):
-            length_constraint.append(((~s1.horizontal & s1.size3 & s1.position[(i, j)]).negate() | (~s1.position[(i, j+1)] & ~s1.position[(i, j+2)])))
-    for i in range(1,size - 2):
-        for j in range(1,size + 1):
-            length_constraint.append(((s1.horizontal & s1.size4 & s1.position[(i, j)]).negate() | (~s1.position[(i+1, j)] & ~s1.position[(i+2, j)] & ~s1.position[(i+3, j)])))
-    for i in range(1,size + 1):
-        for j in range(1,size - 2):
-            length_constraint.append(((~s1.horizontal & s1.size4 & s1.position[(i, j)]).negate() | (~s1.position[(i, j+1)] & ~s1.position[(i, j+2)] & ~s1.position[(i, j+3)])))
-    for i in range(1,size - 3):
-        for j in range(1,size + 1):
-            length_constraint.append(((s1.horizontal & s1.size5 & s1.position[(i, j)]).negate() | (~s1.position[(i + 1, j)] & ~s1.position[(i + 2, j)] & ~s1.position[(i + 3, j)] & ~s1.position[(i+4,
-                                                                                                                                                                                        j)])))
-    for i in range(1,size + 1):
-        for j in range(1,size - 3):
-            length_constraint.append(((~s1.horizontal & s1.size5 & s1.position[(i, j)]).negate() | (~s1.position[(i, j + 1)] & ~s1.position[(i, j + 2)] & ~s1.position[(i, j + 3)] & ~s1.position[(i,
-                                                                                                                                                                                                j + 4)])))
-    e.add_constraint(nnf.And(length_constraint))
-
     return e
 
 # Determines orientation of ship
-def orientation():
+def test_encoding():
     e = Encoding()
 
+    return e
 
+def orientation():
+    e = Encoding()
+    for ship in fleet:
+        e.add_constraint((ship.vertical & ~ship.horizontal) | (ship.horizontal & ~ship.vertical))
+        for i in range(1,size + 1):
+            for j in range(size,size + 1):
+                e.add_constraint(ship.horizontal | ~ship.startPosition[(i,j)])
+        for i in range(size,size + 1):
+            for j in range(1,size + 1):
+                e.add_constraint(ship.vertical | ~ship.startPosition[(i,j)])
+        for i in range(1,size + 1):
+            for j in range(size - 1,size):
+                e.add_constraint((~ship.horizontal & (ship.size3 | ship.size4)).negate() | ~ship.startPosition[(i,j)])
+        for i in range(size - 1,size):
+            for j in range(1,size + 1):
+                e.add_constraint((~ship.vertical & (ship.size3 | ship.size4)).negate() | ~ship.startPosition[(i,j)])
+        for i in range(1,size + 1):
+            for j in range(size - 2,size - 1):
+                e.add_constraint((~ship.horizontal & ship.size4).negate() | ~ship.startPosition[(i,j)])
+        for i in range(size - 2,size - 1):
+            for j in range(1,size + 1):
+                e.add_constraint((~ship.vertical & ship.size4).negate() | ~ship.startPosition[(i,j)])
+        e.add_constraint(nnf.Or(startingSquareHelper(ship)))
     return e
 
 def maxBasedOnShipPlacement():
@@ -332,14 +204,13 @@ def maxBasedOnShipPlacement():
     return e
 
 
-# constraints to ensure all ships are located within the board
-def areAllShipsWithinBoard():
-    e = Encoding()
-    # based on ships placements, are all ship pieces within board
-    e.add_constraint(s1 & s2 & s3 & s4 & s5)
-
-    return e
-
+# Encoding just used to combine the other encoding and their respective constraints and was used for debugging the interactions between 2 or more constraints
+def finalEncoding():
+    final = Encoding()
+    for E in [orientation(), sizes()]:
+        for constraint in E.constraints:
+            final.add_constraint(constraint)
+    return final
 
 # constraint to check if each ship is correctly placed
 # function could be repeated for each ship (s1-s5)
@@ -387,9 +258,9 @@ def areAllShipsOnBoard():
 
 if __name__ == "__main__":
     N = noOverlap()
-    O = sizesAndOrientation()
-    S = startingSquarePlacement()
-    F = finalPositions()
+    Si = sizes()
+    F = finalEncoding()
+    T = test_encoding()
 
     '''
     print("\nSatisfiable: %s" % N.is_satisfiable())
@@ -397,19 +268,20 @@ if __name__ == "__main__":
     print("   Solution: %s" % N.solve())
     '''
     '''
-    print("\nSatisfiable: %s" % O.is_satisfiable())
-    print("# Solutions: %d" % O.count_solutions())
-    print("   Solution: %s" % O.solve())
+    print("\nSatisfiable: %s" % Si.is_satisfiable())
+    print("# Solutions: %d" % Si.count_solutions())
+    print("   Solution: %s" % Si.solve())
     '''
     """
-    print("\nSatisfiable: %s" % F.is_satisfiable())
-    print("# Solutions: %d" % F.count_solutions())
-    print("   Solution: %s" % F.solve())
-    """
-
     print("\nSatisfiable: %s" % S.is_satisfiable())
     print("# Solutions: %d" % S.count_solutions())
     print("   Solution: %s" % S.solve())
+    """
+
+    print("\nSatisfiable: %s" % F.is_satisfiable())
+    print("# Solutions: %d" % F.count_solutions())
+    print("   Solution: %s" % F.solve())
+
 
     """
     print("\nVariable likelihoods:")
