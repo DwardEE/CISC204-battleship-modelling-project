@@ -59,7 +59,7 @@ def check_ship_spacing(ship1,ship2):
 
 
 # size of board (size x size); scalable for debugging and expansion/extension or to avoid computation issues
-size = 4#6
+size = 5#6
 
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(size)
