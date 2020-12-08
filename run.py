@@ -70,6 +70,7 @@ z = Var('z')
 """
 # size of board (size x size); scalable for debugging and expansion/extension
 size = 6
+
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(size)
 
