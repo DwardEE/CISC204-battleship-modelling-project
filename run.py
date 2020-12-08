@@ -288,7 +288,7 @@ if __name__ == "__main__":
     print("   Solution: %s" % F.solve())
     
     end = time.perf_counter()
-    print(f"Downloaded the tutorial in {end - start:0.4f} seconds")
+    print(f"\nComputed the solution in {end - start:0.4f} seconds")
 
 
     """
