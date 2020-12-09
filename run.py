@@ -52,7 +52,7 @@ class Board(object):
 
 
 def printGrid(grid):
-    alpha = ["A", "B", "C", "D", "E", "F"]
+    alpha = ["A", "B", "C", "D", "E", "F", "G", "H"]
     print("  ", end=' ')
     for i in range(size):
         if i != size:
@@ -71,16 +71,8 @@ def printGrid(grid):
         print("")
 
 
-def check_ship_spacing(ship1,ship2):
-    # Full function should return false if ship1 is touching or on top of ship2
-    # Unsure on how to check for or compare positions with location and orientation being boolean values
-    # Initial thought is to check to see if each ship is true in the same spaces on the board
-    # Any feedback on how to implement this would be greatly appreciated!
-    return True
-
-
 # size of board (size x size); scalable for debugging and expansion/extension or to avoid computation issues
-size = 6
+size = 8
 
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(size)
@@ -172,6 +164,7 @@ def allFinalPositions():
                 ship.startPosition[(i, j-1)])) | ~ship.vInterPosition[(i, j)]))
                 e.add_constraint((((ship.vertical & ship.startPosition[(i,j - 3)] & ship.size4) | (ship.vertical & ship.startPosition[(i,j - 2)] & ~ship.size2) | (ship.vertical &
                 ship.startPosition[(i,j - 1)])).negate() | ship.vInterPosition[(i,j)]))
+        # Generation of final board
         for i in range(1,size + 1):
             for j in range(1,size + 1):
                 for ship in fleet:
@@ -278,6 +271,13 @@ def maxBasedOnShipPlacement():
     #e.add_constraint()
     return e
 
+def check_ship_spacing(ship1,ship2):
+    # Full function should return false if ship1 is touching or on top of ship2
+    # Unsure on how to check for or compare positions with location and orientation being boolean values
+    # Initial thought is to check to see if each ship is true in the same spaces on the board
+    # Any feedback on how to implement this would be greatly appreciated!
+    return True
+
 
 # Encoding just used to combine the other encoding and their respective constraints and was used for debugging the interactions between 2 or more constraints
 def finalEncoding():
@@ -342,11 +342,11 @@ if __name__ == "__main__":
     grid = ast.literal_eval(grid_positions)
     sorted_positions = sorted(grid.items())
     print(sorted_positions)
-    sorted_squares = sorted_positions[:36]
+    sorted_squares = sorted_positions[:64]
     sorted_values = []
     for i in range(len(sorted_squares)):
         sorted_values.append(sorted_squares[i][1])
-    final_grid = [sorted_values[r*6:(r+1)*6] for r in range(0,6)]
+    final_grid = [sorted_values[r*8:(r+1)*8] for r in range(0,8)]
     final_grid = [[final_grid[j][i] for j in range(len(final_grid))] for i in range(len(final_grid[0]))]
     printGrid(final_grid)
     """
