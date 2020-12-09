@@ -207,7 +207,7 @@ def maxBasedOnShipPlacement():
 # Encoding just used to combine the other encoding and their respective constraints and was used for debugging the interactions between 2 or more constraints
 def finalEncoding():
     final = Encoding()
-    for E in [orientation(), sizes()]:
+    for E in [orientation(), sizes(),noOverlap()]:
         for constraint in E.constraints:
             final.add_constraint(constraint)
     return final
