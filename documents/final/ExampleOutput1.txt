@@ -16,7 +16,7 @@
    '3s(6,5)': False, '2s(2,2)': False}
    
    
-   To understand this output:
+   This is an example output of the finalencoding() fuction including nooverlap() orientation() and size(). To understand this output:
    
    The number at the beginning of each output refers to the ship number. 
    
