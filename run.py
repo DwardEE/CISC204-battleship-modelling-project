@@ -3,6 +3,9 @@ from lib204 import Encoding
 import ast
 import nnf
 
+#should be built in
+import time
+
 
 # Ship objects where properties inside are propositions
 class Ship(object):
@@ -306,6 +309,14 @@ def isShipWithinBoard():
 
 
 if __name__ == "__main__":
+
+    print("\n Grid size=", size)
+    print("\n Ships count=", len(fleet))
+    for i in range (1,(len(fleet)+1)):
+        print ("\n Ship #"+str(i)+": size"+str(i+1))
+
+    start = time.perf_counter()
+
     N = noOverlap()
     Si = sizes()
     F = finalEncoding()
@@ -354,6 +365,11 @@ if __name__ == "__main__":
     # print("# Solutions: %d" % F.count_solutions())
     print("   Solution: %s" % Fp.solve())
     """
+
+    end = time.perf_counter()
+    print(f"\nComputed solution in {end - start:0.4f} seconds")
+
+
     """
     print("\nVariable likelihoods:")
     for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
