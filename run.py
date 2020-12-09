@@ -13,7 +13,7 @@ class Ship(object):
     def __init__(self,size,id):
         self.position = {}  # Position of the final ships
         self.startPosition = {}  # Used to determine the independent positions of the starting ships
-        self.intermediatePosition = {}  # Board for a ship's placed position that are not the starting position
+        self.interPosition = {}  # Board for a ship's placed position that are not the starting position
         # Sizes of ship (only one can be true per ship object)
         self.size2 = Var("%d%s" % (id, "size2"))  # Destroyer
         self.size3 = Var("%d%s" % (id, "size3"))  # Cruiser or Submarine
@@ -28,7 +28,7 @@ class Ship(object):
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
-                self.intermediatePosition[(i + 1,j + 1)] = Var("%di(%d,%d)" % (id, i + 1, j + 1))
+                self.interPosition[(i + 1,j + 1)] = Var("%di(%d,%d)" % (id, i + 1, j + 1))
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
@@ -107,9 +107,38 @@ def startingSquareHelper(ship):
 #  Encodes for the final actual position of the whole ship depending on the other propositions: orientation, size, starting square
 def allFinalPositions():
     e = Encoding()
-    for i in range(1, size + 1):
-        for j in range(i, size + 1):
-            e.add_constraint(((s1.horizontal & s1.startPosition & s1.size2).negate() | s1.intermediatePosition[(i + 1, j)]) | (s1.startPosition[(i,j)]))
+    possible_placements = []
+    impossible_placements = []
+    e.add_constraint(~s1.horizontal)
+    e.add_constraint(s1.vertical)
+    e.add_constraint(s1.size3)
+    e.add_constraint(~s1.size2)
+    e.add_constraint(~s1.size4)
+    e.add_constraint(nnf.Or(startingSquareHelper(s1)))
+
+    for ship in fleet:
+        e.add_constraint(~ship.interPosition[(1, 1)])
+        for i in range(2, 3):
+            for j in range(1, size + 1):
+                e.add_constraint(((ship.horizontal & ship.startPosition[(i-1,j)]) | ~ship.interPosition[(i,j)]))
+        for i in range(3, 4):
+            for j in range(1, size + 1):
+                e.add_constraint((((ship.horizontal & ship.startPosition[(i-2,j)] & (ship.size3 | ship.size4)) | ship.horizontal & ship.startPosition[(i-1,j)]) | ~ship.interPosition[(i,j)]))
+        for i in range(4, size + 1):
+            for j in range(1, size + 1):
+                e.add_constraint((((ship.horizontal & ship.startPosition[(i-3,j)] & s1.size4) | (ship.horizontal & ship.startPosition[(i-2,j)] & (ship.size3 | ship.size4)) | (ship.horizontal &
+                ship.startPosition[(i-1, j)])) | ~ship.interPosition[(i, j)]))
+        for i in range(1, size + 1):
+            for j in range(2, 3):
+                e.add_constraint(((ship.vertical & ship.startPosition[(i,j-1)]) | ~ship.interPosition[(i,j)]))
+        for i in range(1, size + 1):
+            for j in range(3, 4):
+                e.add_constraint((((ship.vertical & ship.startPosition[(i,j-2)] & (ship.size3 | ship.size4)) | ship.vertical & ship.startPosition[(i,j-1)]) | ~ship.interPosition[(i,j)]))
+        for i in range(1, size + 1):
+            for j in range(4, size + 1):
+                e.add_constraint((((ship.vertical & ship.startPosition[(i,j-3)] & ship.size4) | (ship.vertical & ship.startPosition[(i,j-2)] & (ship.size3 | ship.size4)) | (ship.vertical &
+                ship.startPosition[(i, j-1)])) | ~ship.interPosition[(i, j)]))
+
 
     return e
 
@@ -176,6 +205,7 @@ def orientation():
         e.add_constraint(nnf.Or(startingSquareHelper(ship)))
     return e
 
+# An example of a future extension
 def maxBasedOnShipPlacement():
     e = Encoding()
     # based on ships placement,The goal is to sink the ship (which has already been hit once) with a minimal number of misses.
@@ -207,7 +237,7 @@ def maxBasedOnShipPlacement():
 # Encoding just used to combine the other encoding and their respective constraints and was used for debugging the interactions between 2 or more constraints
 def finalEncoding():
     final = Encoding()
-    for E in [orientation(), sizes()]:
+    for E in [orientation(), sizes(), allFinalPositions()]:
         for constraint in E.constraints:
             final.add_constraint(constraint)
     return final
@@ -228,32 +258,6 @@ def isShipWithinBoard():
 
     return e
 """
-"""
-def areAllShipsOnBoard():
-    e = Encoding()
-    # making sure all ships are true
-
-    #C1 if all ships are present--> true
-    #and if all board squares contain ship/ are filled--> true
-    #then it is concluded that all the ships are on the board
-    for ship in fleet:
-        for i in range(1,(size + 1)):
-            for j in range(1,(size + 1)):
-                C1=(player_board.hit_board[(i,j)] & ship.position[(i,j)])
-
-    #C2 inverse confirmed as well
-    # if all ships are NOT present--> true
-    #and if all board squares the DO NOT contain ship/ are empty--> true
-    #then it is concluded that there are NO ships where the board should be empty
-
-    for ship in fleet:
-        for i in range(1,(size + 1)):
-            for j in range(1,(size + 1)):
-                C2=(~player_board.hit_board[(i,j)] & ~ship.position[(i,j)])
-
-    e.add_constraint(C1 & C2)
-    return e
-"""
 
 
 if __name__ == "__main__":
@@ -261,6 +265,7 @@ if __name__ == "__main__":
     Si = sizes()
     F = finalEncoding()
     T = test_encoding()
+    Fp = allFinalPositions()
 
     '''
     print("\nSatisfiable: %s" % N.is_satisfiable())
@@ -279,10 +284,14 @@ if __name__ == "__main__":
     """
 
     print("\nSatisfiable: %s" % F.is_satisfiable())
-    print("# Solutions: %d" % F.count_solutions())
+    # print("# Solutions: %d" % F.count_solutions())
     print("   Solution: %s" % F.solve())
 
-
+    """
+    print("\nSatisfiable: %s" % Fp.is_satisfiable())
+    # print("# Solutions: %d" % F.count_solutions())
+    print("   Solution: %s" % Fp.solve())
+    """
     """
     print("\nVariable likelihoods:")
     for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
