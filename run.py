@@ -54,16 +54,19 @@ class Board(object):
                 self.hit_board[(i + 1,j + 1)] = Var("(%d,%d)" % (i + 1,j + 1))
 
 
+# Prints grid
 def printGrid(grid):
+    # Axis for the y-side
     alpha = ["A", "B", "C", "D", "E", "F", "G", "H"]
     print("  ", end=' ')
+    # prints the x axis
     for i in range(size):
         if i != size:
             print(str(i + 1) + " ", end='')
         else:
             print(i + 1, end=' ')
     print("")
-
+    # prints the y axis with the results of the corresponding grid
     for i in range(size):
         print(alpha[i] + " ", end=' ')
         for j in range(size):
@@ -75,7 +78,8 @@ def printGrid(grid):
 
 
 # size of board (size x size); scalable for debugging and expansion/extension or to avoid computation issues
-size = 8
+size = 6
+win_con = Var("playerWins")
 
 # Initializes a board object of size 10x10 (what we are currently using as a standard for now)
 player_board = Board(size)
@@ -90,14 +94,16 @@ s5 = Ship(size,5)
 # Array if need (e.g. using for loops for a property of the ships)
 fleet = [s1,s2,s3]
 
-# See if all ship coordinates are hit
+
+# Simple encoding to see if all ship coordinates are hit
 def winCondition():
     e = Encoding()
-
-    for ship in fleet:
-        for i in range(1,size + 1):
-            for j in range(1,size + 1):
-                e.add_constraint(player_board.hit_board[(i,j)] & ship.position[(i,j)] | ~player_board.hit_board[(i,j)] & ~ship.position[(i,j)])
+    win = []
+    for i in range(1,size + 1):
+        for j in range(1,size + 1):
+            win.append((s1.position[(i,j)] & player_board.hit_board[(i,j)]))
+    e.add_constraint(nnf.And(win).negate() | win_con)
+    e.add_constraint(nnf.And(win) | ~win_con)
     return e
 
 
@@ -121,12 +127,6 @@ def startingSquareHelper(ship):
             constraint_list.append(nnf.And(conjunct_list))
             conjunct_list = []
     return constraint_list
-
-
-def test_encode():
-    e = Encoding()
-
-    return e
 
 
 #  Encodes for the final actual position of the whole ship depending on the other propositions: orientation, size, starting square
@@ -246,6 +246,7 @@ def orientation():
         e.add_constraint(nnf.Or(startingSquareHelper(ship)))
     return e
 
+
 # An example of a future extension
 def maxBasedOnShipPlacement():
     e = Encoding()
@@ -274,6 +275,7 @@ def maxBasedOnShipPlacement():
     #e.add_constraint()
     return e
 
+# Possible extension
 def check_ship_spacing(ship1,ship2):
     # Full function should return false if ship1 is touching or on top of ship2
     # Unsure on how to check for or compare positions with location and orientation being boolean values
@@ -344,20 +346,20 @@ if __name__ == "__main__":
     # print("# Solutions: %d" % F.count_solutions())
     print("   Solution: %s" % T.solve())
     """
-    """
-    print("\nSatisfiable: %s" % F.is_satisfiable())
+
+    # print("\nSatisfiable: %s" % F.is_satisfiable())
     # print("# Solutions: %d" % F.count_solutions())
-    print("   Solution: %s" % F.solve())
-    """
+    # print("   Solution: %s" % F.solve())
+
     grid_positions = "%s" % F.solve()
     grid = ast.literal_eval(grid_positions)
     sorted_positions = sorted(grid.items())
     print(sorted_positions)
-    sorted_squares = sorted_positions[:64]
+    sorted_squares = sorted_positions[:(size*size)]
     sorted_values = []
     for i in range(len(sorted_squares)):
         sorted_values.append(sorted_squares[i][1])
-    final_grid = [sorted_values[r*8:(r+1)*8] for r in range(0,8)]
+    final_grid = [sorted_values[r*size:(r+1)*size] for r in range(0,size)]
     final_grid = [[final_grid[j][i] for j in range(len(final_grid))] for i in range(len(final_grid[0]))]
     printGrid(final_grid)
     """
@@ -369,10 +371,3 @@ if __name__ == "__main__":
     end = time.perf_counter()
     print(f"\nComputed solution in {end - start:0.4f} seconds")
 
-
-    """
-    print("\nVariable likelihoods:")
-    for v,vn in zip([a,b,c,x,y,z], 'abcxyz'):
-        print(" %s: %.2f" % (vn, T.likelihood(v)))
-    print()
-    """
