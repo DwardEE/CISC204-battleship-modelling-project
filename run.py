@@ -126,8 +126,8 @@ def allFinalPositions():
                 e.add_constraint((((ship.horizontal & ship.startPosition[(i-2,j)] & (ship.size3 | ship.size4)) | ship.horizontal & ship.startPosition[(i-1,j)]) | ~ship.interPosition[(i,j)]))
         for i in range(4, size + 1):
             for j in range(1, size + 1):
-                e.add_constraint((((ship.horizontal & ship.startPosition[(i-3,j)] & s1.size4) | (ship.horizontal & ship.startPosition[(i-2,j)] & (ship.size3 | ship.size4)) | (ship.horizontal &
-                ship.startPosition[(i-1, j)])) | ~ship.interPosition[(i, j)]))
+                e.add_constraint((((ship.horizontal & ship.startPosition[(i-3,j)] & ship.size4) | (ship.horizontal & ship.startPosition[(i-2,j)] & (ship.size3 | ship.size4)) | (ship.horizontal &
+                                                                                                                                                                                 ship.startPosition[(i-1, j)])) | ~ship.interPosition[(i, j)]))
         for i in range(1, size + 1):
             for j in range(2, 3):
                 e.add_constraint(((ship.vertical & ship.startPosition[(i,j-1)]) | ~ship.interPosition[(i,j)]))
@@ -137,7 +137,7 @@ def allFinalPositions():
         for i in range(1, size + 1):
             for j in range(4, size + 1):
                 e.add_constraint((((ship.vertical & ship.startPosition[(i,j-3)] & ship.size4) | (ship.vertical & ship.startPosition[(i,j-2)] & (ship.size3 | ship.size4)) | (ship.vertical &
-                ship.startPosition[(i, j-1)])) | ~ship.interPosition[(i, j)]))
+                                                                                                                                                                             ship.startPosition[(i, j-1)])) | ~ship.interPosition[(i, j)]))
 
 
     return e
