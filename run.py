@@ -1,7 +1,6 @@
 from nnf import Var
-from nnf import false
-from nnf import true
 from lib204 import Encoding
+import ast
 import nnf
 
 
@@ -13,7 +12,8 @@ class Ship(object):
     def __init__(self,size,id):
         self.position = {}  # Position of the final ships
         self.startPosition = {}  # Used to determine the independent positions of the starting ships
-        self.interPosition = {}  # Board for a ship's placed position that are not the starting position
+        self.hInterPosition = {}  # Board for a ship's placed position that are not the starting position
+        self.vInterPosition = {}  # Board for a ship's placed position that are not the starting position
         # Sizes of ship (only one can be true per ship object)
         self.size2 = Var("%d%s" % (id, "size2"))  # Destroyer
         self.size3 = Var("%d%s" % (id, "size3"))  # Cruiser or Submarine
@@ -28,7 +28,11 @@ class Ship(object):
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
-                self.interPosition[(i + 1,j + 1)] = Var("%di(%d,%d)" % (id, i + 1, j + 1))
+                self.hInterPosition[(i + 1,j + 1)] = Var("%dh(%d,%d)" % (id, i + 1, j + 1))
+        for i in range(size):
+            for j in range(size):
+                # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
+                self.vInterPosition[(i + 1,j + 1)] = Var("%dv(%d,%d)" % (id, i + 1, j + 1))
         for i in range(size):
             for j in range(size):
                 # var for coordinate should be true if there is a ship on the coordinate's (x, y) position
@@ -45,6 +49,26 @@ class Board(object):
             for j in range(size):
                 # var for coordinate is true if the (x, y) position is hit
                 self.hit_board[(i + 1,j + 1)] = Var("(%d,%d)" % (i + 1,j + 1))
+
+
+def printGrid(grid):
+    alpha = ["A", "B", "C", "D", "E", "F"]
+    print("  ", end=' ')
+    for i in range(size):
+        if i != size:
+            print(str(i + 1) + " ", end='')
+        else:
+            print(i + 1, end=' ')
+    print("")
+
+    for i in range(size):
+        print(alpha[i] + " ", end=' ')
+        for j in range(size):
+            if grid[i][j]:
+                print("O", end=' ')
+            else:
+                print("-", end=' ')
+        print("")
 
 
 def check_ship_spacing(ship1,ship2):
@@ -104,40 +128,66 @@ def startingSquareHelper(ship):
     return constraint_list
 
 
+def test_encode():
+    e = Encoding()
+
+    return e
+
+
 #  Encodes for the final actual position of the whole ship depending on the other propositions: orientation, size, starting square
 def allFinalPositions():
     e = Encoding()
-    possible_placements = []
-    impossible_placements = []
-    e.add_constraint(~s1.horizontal)
-    e.add_constraint(s1.vertical)
-    e.add_constraint(s1.size3)
-    e.add_constraint(~s1.size2)
-    e.add_constraint(~s1.size4)
+    placements = []
     e.add_constraint(nnf.Or(startingSquareHelper(s1)))
 
     for ship in fleet:
-        e.add_constraint(~ship.interPosition[(1, 1)])
+        for i in range(1, size + 1):
+            e.add_constraint(~ship.vInterPosition[(i,1)])
+            e.add_constraint(~ship.hInterPosition[(1,i)])
         for i in range(2, 3):
             for j in range(1, size + 1):
-                e.add_constraint(((ship.horizontal & ship.startPosition[(i-1,j)]) | ~ship.interPosition[(i,j)]))
+                e.add_constraint(((ship.horizontal & ship.startPosition[(i-1,j)]) | ~ship.hInterPosition[(i,j)]))
+                e.add_constraint(((ship.horizontal & ship.startPosition[(i - 1,j)]).negate() | ship.hInterPosition[(i,j)]))
         for i in range(3, 4):
             for j in range(1, size + 1):
-                e.add_constraint((((ship.horizontal & ship.startPosition[(i-2,j)] & (ship.size3 | ship.size4)) | ship.horizontal & ship.startPosition[(i-1,j)]) | ~ship.interPosition[(i,j)]))
+                e.add_constraint((((ship.horizontal & ship.startPosition[(i - 2,j)] & ~ship.size2) | (ship.horizontal & ship.startPosition[(i - 1,j)])) | ~ship.hInterPosition[(i,j)]))
+                e.add_constraint((((ship.horizontal & ship.startPosition[(i - 2,j)] & ~ship.size2) | (ship.horizontal & ship.startPosition[(i - 1,j)])).negate() | ship.hInterPosition[(i,j)]))
         for i in range(4, size + 1):
             for j in range(1, size + 1):
-                e.add_constraint((((ship.horizontal & ship.startPosition[(i-3,j)] & ship.size4) | (ship.horizontal & ship.startPosition[(i-2,j)] & (ship.size3 | ship.size4)) | (ship.horizontal &
-                                                                                                                                                                                 ship.startPosition[(i-1, j)])) | ~ship.interPosition[(i, j)]))
+                e.add_constraint((((ship.horizontal & ship.startPosition[(i-3,j)] & ship.size4) | (ship.horizontal & ship.startPosition[(i-2,j)] & ~ship.size2) | (ship.horizontal &
+                ship.startPosition[(i-1, j)])) | ~ship.hInterPosition[(i, j)]))
+                e.add_constraint((((ship.horizontal & ship.startPosition[(i - 3,j)] & ship.size4) | (ship.horizontal & ship.startPosition[(i - 2,j)] & ~ship.size2) | (ship.horizontal &
+                ship.startPosition[(i - 1,j)])).negate() | ship.hInterPosition[(i,j)]))
         for i in range(1, size + 1):
             for j in range(2, 3):
-                e.add_constraint(((ship.vertical & ship.startPosition[(i,j-1)]) | ~ship.interPosition[(i,j)]))
+                e.add_constraint(((ship.vertical & ship.startPosition[(i,j-1)]) | ~ship.vInterPosition[(i,j)]))
+                e.add_constraint(((ship.vertical & ship.startPosition[(i,j - 1)]).negate() | ship.vInterPosition[(i,j)]))
         for i in range(1, size + 1):
             for j in range(3, 4):
-                e.add_constraint((((ship.vertical & ship.startPosition[(i,j-2)] & (ship.size3 | ship.size4)) | ship.vertical & ship.startPosition[(i,j-1)]) | ~ship.interPosition[(i,j)]))
+                e.add_constraint((((ship.vertical & ship.startPosition[(i,j-2)] & ~ship.size2) | (ship.vertical & ship.startPosition[(i,j-1)])) | ~ship.vInterPosition[(i,j)]))
+                e.add_constraint((((ship.vertical & ship.startPosition[(i,j - 2)] & ~ship.size2) | (ship.vertical & ship.startPosition[(i,j - 1)])).negate() | ship.vInterPosition[(i,j)]))
         for i in range(1, size + 1):
             for j in range(4, size + 1):
-                e.add_constraint((((ship.vertical & ship.startPosition[(i,j-3)] & ship.size4) | (ship.vertical & ship.startPosition[(i,j-2)] & (ship.size3 | ship.size4)) | (ship.vertical &
-                                                                                                                                                                             ship.startPosition[(i, j-1)])) | ~ship.interPosition[(i, j)]))
+                e.add_constraint((((ship.vertical & ship.startPosition[(i,j-3)] & ship.size4) | (ship.vertical & ship.startPosition[(i,j-2)] & ~ship.size2) | (ship.vertical &
+                ship.startPosition[(i, j-1)])) | ~ship.vInterPosition[(i, j)]))
+                e.add_constraint((((ship.vertical & ship.startPosition[(i,j - 3)] & ship.size4) | (ship.vertical & ship.startPosition[(i,j - 2)] & ~ship.size2) | (ship.vertical &
+                ship.startPosition[(i,j - 1)])).negate() | ship.vInterPosition[(i,j)]))
+        for i in range(1,size + 1):
+            for j in range(1,size + 1):
+                for ship in fleet:
+                    placements.append(ship.startPosition[(i,j)])
+                    placements.append(ship.hInterPosition[(i,j)])
+                    placements.append(ship.vInterPosition[(i,j)])
+                e.add_constraint((nnf.Or(placements)) | ~s1.position[(i,j)])
+                placements = []
+        for i in range(1,size + 1):
+            for j in range(1,size + 1):
+                for ship in fleet:
+                    placements.append(ship.startPosition[(i,j)])
+                    placements.append(ship.hInterPosition[(i,j)])
+                    placements.append(ship.vInterPosition[(i,j)])
+                e.add_constraint((nnf.Or(placements)).negate() | s1.position[(i,j)])
+                placements = []
 
 
     return e
@@ -175,11 +225,6 @@ def sizes():
     return e
 
 # Determines orientation of ship
-def test_encoding():
-    e = Encoding()
-
-    return e
-
 def orientation():
     e = Encoding()
     for ship in fleet:
@@ -237,7 +282,7 @@ def maxBasedOnShipPlacement():
 # Encoding just used to combine the other encoding and their respective constraints and was used for debugging the interactions between 2 or more constraints
 def finalEncoding():
     final = Encoding()
-    for E in [orientation(), sizes(), allFinalPositions()]:
+    for E in [orientation(), sizes(), allFinalPositions(), noOverlap()]:
         for constraint in E.constraints:
             final.add_constraint(constraint)
     return final
@@ -264,7 +309,7 @@ if __name__ == "__main__":
     N = noOverlap()
     Si = sizes()
     F = finalEncoding()
-    T = test_encoding()
+    # T = test_encode()
     Fp = allFinalPositions()
 
     '''
@@ -283,10 +328,27 @@ if __name__ == "__main__":
     print("   Solution: %s" % S.solve())
     """
 
+    """
+    print("\nSatisfiable: %s" % T.is_satisfiable())
+    # print("# Solutions: %d" % F.count_solutions())
+    print("   Solution: %s" % T.solve())
+    """
+    """
     print("\nSatisfiable: %s" % F.is_satisfiable())
     # print("# Solutions: %d" % F.count_solutions())
     print("   Solution: %s" % F.solve())
-
+    """
+    grid_positions = "%s" % F.solve()
+    grid = ast.literal_eval(grid_positions)
+    sorted_positions = sorted(grid.items())
+    print(sorted_positions)
+    sorted_squares = sorted_positions[:36]
+    sorted_values = []
+    for i in range(len(sorted_squares)):
+        sorted_values.append(sorted_squares[i][1])
+    final_grid = [sorted_values[r*6:(r+1)*6] for r in range(0,6)]
+    final_grid = [[final_grid[j][i] for j in range(len(final_grid))] for i in range(len(final_grid[0]))]
+    printGrid(final_grid)
     """
     print("\nSatisfiable: %s" % Fp.is_satisfiable())
     # print("# Solutions: %d" % F.count_solutions())
